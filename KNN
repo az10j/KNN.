@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Trợ Giúp Quyết Định - Mô Phỏng KNN Euclidean</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#131e32',
+                            900: '#0f172a',
+                            950: '#020617',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons & Google Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+            ::-webkit-scrollbar-thumb:hover {
+                background: #475569;
+            }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Header Navigation -->
+    <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-indigo-600 rounded-lg text-white shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid fa-chart-nodes text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">Mô Phỏng Thuật Toán K-NN (Khoảng Cách Euclidean)</h1>
+                    <p class="text-xs text-slate-400">Hệ Trợ Giúp Quyết Định (DSS) — Phân Loại Bộ Dữ Liệu Hoa Diên Vĩ (Iris)</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    <span class="w-1.5 h-1.5 mr-1.5 bg-indigo-400 rounded-full animate-pulse"></span> Công thức Euclidean chuẩn
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- CỘT TRÁI: ĐIỀU KHIỂN & BỘ DỮ LIỆU -->
+        <div class="lg:col-span-4 space-y-6 flex flex-col">
+
+            <!-- Tham Số Đầu Vào -->
+            <div class="bg-slate-900 rounded-xl border border-slate-800 p-5 shadow-xl space-y-5">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h2 class="font-semibold text-slate-200 flex items-center gap-2 text-sm">
+                        <i class="fa-solid fa-pen-to-square text-indigo-400"></i> Bảng Nhập Thông Số Đầu Vào
+                    </h2>
+                    <span class="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded">Ô Nhập Số</span>
+                </div>
+
+                <!-- Chọn Tập Dữ Liệu -->
+                <div>
+                    <label for="datasetSelect" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">1. Chọn Tập Dữ Liệu Huấn Luyện</label>
+                    <select id="datasetSelect" class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                        <option value="iris">Bộ Dữ Liệu Hoa Iris Chuẩn (150 Mẫu)</option>
+                        <option value="simple">Tập Mẫu Đơn Giản Chuẩn Bài Tập (5 Mẫu)</option>
+                    </select>
+                </div>
+
+                <!-- Nhập Số K -->
+                <div>
+                    <label for="kInput" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">2. Số Láng Giềng Gần Nhất (Tham số K)</label>
+                    <input type="number" id="kInput" min="1" max="15" value="3" class="w-full bg-slate-800 border border-slate-700 font-bold text-indigo-400 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                    <p class="text-[11px] text-slate-500 mt-1">Nhập số nguyên từ 1 đến 15.</p>
+                </div>
+
+                <!-- Tọa Độ Điểm Cần Dự Đoán -->
+                <div class="pt-3 border-t border-slate-800 space-y-4">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">3. Tọa Độ Mẫu Hoa Cần Dự Đoán</label>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- Nhập Chiều Dài X -->
+                        <div>
+                            <label for="queryXInput" class="block text-[11px] text-slate-300 mb-1">Chiều dài cánh (X)</label>
+                            <div class="relative">
+                                <input type="number" id="queryXInput" min="0" max="10" step="0.1" value="5.2" class="w-full bg-slate-800 border border-slate-700 font-mono text-slate-200 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                                <span class="absolute right-3 top-2.5 text-xs text-slate-500">cm</span>
+                            </div>
+                        </div>
+
+                        <!-- Nhập Chiều Rộng Y -->
+                        <div>
+                            <label for="queryYInput" class="block text-[11px] text-slate-300 mb-1">Chiều rộng cánh (Y)</label>
+                            <div class="relative">
+                                <input type="number" id="queryYInput" min="0" max="10" step="0.1" value="3.1" class="w-full bg-slate-800 border border-slate-700 font-mono text-slate-200 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                                <span class="absolute right-3 top-2.5 text-xs text-slate-500">cm</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Thêm Mẫu Mới -->
+            <div class="bg-slate-900 rounded-xl border border-slate-800 p-5 shadow-xl space-y-4">
+                <h2 class="font-semibold text-slate-200 flex items-center gap-2 text-sm border-b border-slate-800 pb-2">
+                    <i class="fa-solid fa-plus-circle text-emerald-400"></i> Thêm Mẫu Mới Vào Tập Dữ Liệu
+                </h2>
+                <form id="addDataForm" class="space-y-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="newX" class="block text-[11px] font-medium text-slate-400 mb-1">Chiều dài (X)</label>
+                            <input type="number" id="newX" step="0.1" required value="6.0" min="0" max="10" class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg p-2 outline-none focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label for="newY" class="block text-[11px] font-medium text-slate-400 mb-1">Chiều rộng (Y)</label>
+                            <input type="number" id="newY" step="0.1" required value="3.5" min="0" max="10" class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg p-2 outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="newClass" class="block text-[11px] font-medium text-slate-400 mb-1">Loài Hoa (Nhãn Chuẩn)</label>
+                        <select id="newClass" class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg p-2 outline-none focus:border-indigo-500">
+                            <option value="Setosa">Setosa (Màu Đỏ)</option>
+                            <option value="Versicolor">Versicolor (Màu Xanh Lá)</option>
+                            <option value="Virginica">Virginica (Màu Xanh Dương)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs rounded-lg transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Thêm Mẫu Vào Đồ Thị
+                    </button>
+                </form>
+            </div>
+
+        </div>
+
+        <!-- CỘT PHẢI: TRỰC QUAN HÓA & NHẬT KÝ KẾT QUẢ -->
+        <div class="lg:col-span-8 space-y-6">
+
+            <!-- Biểu Đồ Không Gian 2D (Canvas) -->
+            <div class="bg-slate-900 rounded-xl border border-slate-800 p-4 shadow-xl flex flex-col relative">
+                <div class="flex items-center justify-between mb-3 px-2">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-map text-indigo-400"></i>
+                        <h2 class="font-semibold text-slate-200 text-sm">Đồ Thị Biểu Diễn Trực Quan 2D</h2>
+                        <span class="text-[11px] text-slate-500 italic ml-2">(Lăn chuột để Zoom • Giữ chuột để Di chuyển góc nhìn)</span>
+                    </div>
+                    <!-- Chú thích màu -->
+                    <div class="flex items-center gap-4 text-xs">
+                        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span> Setosa</div>
+                        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-400 inline-block"></span> Versicolor</div>
+                        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-sky-400 inline-block"></span> Virginica</div>
+                        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-400 border border-white inline-block"></span> Điểm Cần Phân Loại</div>
+                    </div>
+                </div>
+
+                <!-- Khung Canvas -->
+                <div class="relative w-full aspect-[4/3] bg-slate-950 rounded-lg border border-slate-800 overflow-hidden cursor-grab active:cursor-grabbing">
+                    <canvas id="knnCanvas" class="w-full h-full block"></canvas>
+
+                    <!-- Nút Reset Zoom/Pan -->
+                    <button id="resetViewBtn" class="absolute bottom-3 right-3 bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-md border border-slate-700 transition flex items-center gap-1.5 backdrop-blur-sm">
+                        <i class="fa-solid fa-rotate-left"></i> Đặt lại góc nhìn
+                    </button>
+                </div>
+            </div>
+
+            <!-- Kết Quả Dự Đoán & Bảng Xếp Hạng K-Láng Giềng -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <!-- Khối Dự Đoán -->
+                <div class="bg-slate-900 rounded-xl border border-slate-800 p-5 shadow-xl space-y-4 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Kết Quả Phân Loại Của Thuật Toán</h3>
+                        <div id="predictionBadge" class="p-4 rounded-xl border bg-slate-950 border-slate-800 flex items-center justify-between">
+                            <div>
+                                <span class="text-xs text-slate-400 block">Dự đoán thuộc loài hoa:</span>
+                                <span id="predictedClassName" class="text-xl font-bold text-slate-100">Đang tính toán...</span>
+                            </div>
+                            <div id="predictedClassIcon" class="w-10 h-10 rounded-full flex items-center justify-center text-lg bg-slate-800 text-slate-400 font-bold">
+                                ?
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tỷ Lệ Phiếu Bầu -->
+                    <div class="space-y-2">
+                        <h4 class="text-xs font-semibold text-slate-400">Tỷ Lệ Bỏ Phiếu Số Đông</h4>
+                        <div id="votingBars" class="space-y-1.5"></div>
+                    </div>
+                </div>
+
+                <!-- Bảng Top K Láng Giềng Gần Nhất -->
+                <div class="bg-slate-900 rounded-xl border border-slate-800 p-4 shadow-xl flex flex-col h-64">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Danh Sách K Láng Giềng Gần Nhất</h3>
+                    <div class="overflow-y-auto flex-1 border border-slate-800 rounded-lg">
+                        <table class="w-full text-left text-xs text-slate-300">
+                            <thead class="bg-slate-800/80 sticky top-0 text-slate-400 font-semibold border-b border-slate-700">
+                                <tr>
+                                    <th class="p-2">Hạng</th>
+                                    <th class="p-2">Loài Hoa</th>
+                                    <th class="p-2">Tọa Độ</th>
+                                    <th class="p-2 text-right">Khoảng Cách (d)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="neighborsTableBody" class="divide-y divide-slate-800"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Nhật Ký Chi Tiết Thuật Toán -->
+            <div class="bg-slate-900 rounded-xl border border-slate-800 p-5 shadow-xl space-y-3">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-indigo-400"></i> Các Bước Giải Thích Chi Tiết
+                </h3>
+                <div id="decisionLog" class="font-mono text-xs text-slate-300 bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-2 overflow-x-auto max-h-48 overflow-y-auto">
+                    <!-- Logs tự động nạp -->
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <script>
+        // 1. TẬP DỮ LIỆU HUẤN LƯYỆN
+        const IRIS_SUBSET = [
+            { x: 5.1, y: 3.5, label: 'Setosa' }, { x: 4.9, y: 3.0, label: 'Setosa' },
+            { x: 4.7, y: 3.2, label: 'Setosa' }, { x: 4.6, y: 3.1, label: 'Setosa' },
+            { x: 5.0, y: 3.6, label: 'Setosa' }, { x: 5.4, y: 3.9, label: 'Setosa' },
+            { x: 7.0, y: 3.2, label: 'Versicolor' }, { x: 6.4, y: 3.2, label: 'Versicolor' },
+            { x: 6.9, y: 3.1, label: 'Versicolor' }, { x: 5.5, y: 2.3, label: 'Versicolor' },
+            { x: 6.5, y: 2.8, label: 'Versicolor' }, { x: 5.7, y: 2.8, label: 'Versicolor' },
+            { x: 6.3, y: 3.3, label: 'Virginica' }, { x: 5.8, y: 2.7, label: 'Virginica' },
+            { x: 7.1, y: 3.0, label: 'Virginica' }, { x: 6.3, y: 2.9, label: 'Virginica' },
+            { x: 6.5, y: 3.0, label: 'Virginica' }, { x: 7.6, y: 3.0, label: 'Virginica' }
+        ];
+
+        const SIMPLE_DATASET = [
+            { x: 2.0, y: 3.0, label: 'Setosa' },
+            { x: 3.0, y: 3.5, label: 'Setosa' },
+            { x: 6.0, y: 6.5, label: 'Versicolor' },
+            { x: 7.0, y: 7.0, label: 'Versicolor' },
+            { x: 8.0, y: 2.0, label: 'Virginica' }
+        ];
+
+        // Trạng thái ứng dụng
+        let currentDataset = IRIS_SUBSET;
+        let queryPoint = { x: 5.2, y: 3.1 };
+        let kValue = 3;
+
+        // Trạng thái Zoom & Pan
+        let zoomLevel = 1.0;
+        let panOffset = { x: 0, y: 0 };
+        let isDragging = false;
+        let startDragPos = { x: 0, y: 0 };
+
+        // Bảng màu cho các lớp
+        const CLASS_COLORS = {
+            'Setosa': { fill: '#f43f5e', border: '#be123c', text: 'text-rose-400' },
+            'Versicolor': { fill: '#34d399', border: '#059669', text: 'text-emerald-400' },
+            'Virginica': { fill: '#38bdf8', border: '#0284c7', text: 'text-sky-400' }
+        };
+
+        // 2. HÀM TÍNH KHOẢNG CÁCH EUCLIDEAN DUY NHẤT
+        function calculateEuclideanDistance(p1, p2) {
+            const dx = p1.x - p2.x;
+            const dy = p1.y - p2.y;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        // Đơn vị vẽ Canvas
+        const canvas = document.getElementById('knnCanvas');
+        const ctx = canvas.getContext('2d');
+        const PADDING = 40;
+
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            render();
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // Chuyển đổi tọa độ dữ liệu sang tọa độ Canvas (Có tính Zoom & Pan)
+        function toCanvasCoords(p) {
+            const w = canvas.width - PADDING * 2;
+            const h = canvas.height - PADDING * 2;
+
+            let cx = PADDING + (p.x / 10) * w;
+            let cy = canvas.height - (PADDING + (p.y / 10) * h);
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            return {
+                x: (cx - centerX) * zoomLevel + centerX + panOffset.x,
+                y: (cy - centerY) * zoomLevel + centerY + panOffset.y
+            };
+        }
+
+        // 3. THUẬT TOÁN K-NN & HIỂN THỊ DỮ LIỆU
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Vẽ Lưới Tọa Độ
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1 * window.devicePixelRatio;
+            ctx.font = `${10 * window.devicePixelRatio * zoomLevel}px Inter`;
+            ctx.fillStyle = '#64748b';
+
+            for (let i = 0; i <= 10; i++) {
+                const pos = toCanvasCoords({ x: i, y: i });
+                ctx.beginPath();
+                ctx.moveTo(pos.x, 0);
+                ctx.lineTo(pos.x, canvas.height);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, pos.y);
+                ctx.lineTo(canvas.width, pos.y);
+                ctx.stroke();
+
+                ctx.fillText(i, pos.x - 3, canvas.height - 10 * window.devicePixelRatio);
+                if (i > 0) ctx.fillText(i, 10 * window.devicePixelRatio, pos.y + 4);
+            }
+
+            // 2. Tính Khoảng Cách Euclidean Cho Toàn Bộ Tập Huấn Luyện
+            const evaluatedPoints = currentDataset.map(pt => ({
+                ...pt,
+                distance: calculateEuclideanDistance(queryPoint, pt)
+            }));
+
+            // 3. Sắp Xếp Tăng Dần Dựa Trên Khoảng Cách
+            evaluatedPoints.sort((a, b) => a.distance - b.distance);
+
+            // 4. Lọc Lấy K Điểm Gần Nhất
+            const neighbors = evaluatedPoints.slice(0, Math.min(kValue, evaluatedPoints.length));
+            const maxRadiusDistance = neighbors.length > 0 ? neighbors[neighbors.length - 1].distance : 0;
+
+            // 5. Vẽ Đường Tròn Khoanh Vùng Láng Giềng K
+            const queryCanvasPos = toCanvasCoords(queryPoint);
+            if (neighbors.length > 0) {
+                const edgePoint = toCanvasCoords({ x: queryPoint.x + maxRadiusDistance, y: queryPoint.y });
+                const radiusPx = Math.abs(edgePoint.x - queryCanvasPos.x);
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(queryCanvasPos.x, queryCanvasPos.y, radiusPx, 0, 2 * Math.PI);
+                ctx.fillStyle = 'rgba(99, 102, 241, 0.08)';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(99, 102, 241, 0.4)';
+                ctx.lineWidth = 1.5 * window.devicePixelRatio;
+                ctx.setLineDash([4 * window.devicePixelRatio, 4 * window.devicePixelRatio]);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // 6. Vẽ Nối Các Đường Từ Điểm Truy Vấn Đến K Láng Giềng
+            neighbors.forEach(n => {
+                const nPos = toCanvasCoords(n);
+                ctx.beginPath();
+                ctx.moveTo(queryCanvasPos.x, queryCanvasPos.y);
+                ctx.lineTo(nPos.x, nPos.y);
+                ctx.strokeStyle = 'rgba(251, 191, 36, 0.6)';
+                ctx.lineWidth = 1.5 * window.devicePixelRatio;
+                ctx.stroke();
+            });
+
+            // 7. Vẽ Các Điểm Dữ Liệu
+            currentDataset.forEach(pt => {
+                const pos = toCanvasCoords(pt);
+                const isNeighbor = neighbors.some(n => n.x === pt.x && n.y === pt.y && n.label === pt.label);
+                const colorInfo = CLASS_COLORS[pt.label] || { fill: '#cbd5e1', border: '#64748b' };
+
+                ctx.beginPath();
+                const radius = (isNeighbor ? 7 : 5) * window.devicePixelRatio * Math.max(zoomLevel, 0.7);
+                ctx.arc(pos.x, pos.y, radius, 0, 2 * Math.PI);
+                ctx.fillStyle = colorInfo.fill;
+                ctx.fill();
+                ctx.lineWidth = (isNeighbor ? 2.5 : 1.5) * window.devicePixelRatio;
+                ctx.strokeStyle = isNeighbor ? '#fbbf24' : colorInfo.border;
+                ctx.stroke();
+            });
+
+            // 8. Vẽ Điểm Cần Dự Đoán
+            ctx.beginPath();
+            ctx.arc(queryCanvasPos.x, queryCanvasPos.y, 8 * window.devicePixelRatio * Math.max(zoomLevel, 0.7), 0, 2 * Math.PI);
+            ctx.fillStyle = '#f59e0b';
+            ctx.fill();
+            ctx.lineWidth = 2 * window.devicePixelRatio;
+            ctx.strokeStyle = '#ffffff';
+            ctx.stroke();
+
+            // Cập nhật các bảng kết quả
+            updateUI(neighbors, evaluatedPoints);
+        }
+
+        // Cập nhật giao diện khi có thay đổi
+        function updateUI(neighbors, evaluatedPoints) {
+            // Đếm phiếu bầu bình đẳng
+            const votes = {};
+            neighbors.forEach(n => {
+                votes[n.label] = (votes[n.label] || 0) + 1;
+            });
+
+            // Lớp chiến thắng có số phiếu đông nhất
+            let predictedClass = 'Chưa xác định';
+            let maxVote = -1;
+            Object.entries(votes).forEach(([cls, voteVal]) => {
+                if (voteVal > maxVote) {
+                    maxVote = voteVal;
+                    predictedClass = cls;
+                }
+            });
+
+            // 1. Thẻ Nhãn Dự Đoán
+            const predictedClassName = document.getElementById('predictedClassName');
+            const predictedClassIcon = document.getElementById('predictedClassIcon');
+            predictedClassName.innerText = predictedClass;
+            const classColor = CLASS_COLORS[predictedClass] || { text: 'text-slate-200', fill: '#64748b' };
+            predictedClassName.className = `text-xl font-bold ${classColor.text}`;
+            predictedClassIcon.style.backgroundColor = classColor.fill;
+            predictedClassIcon.innerText = predictedClass.charAt(0);
+
+            // 2. Thanh Biểu Đồ Phiếu Bầu
+            const votingBars = document.getElementById('votingBars');
+            votingBars.innerHTML = '';
+            const allClasses = ['Setosa', 'Versicolor', 'Virginica'];
+            allClasses.forEach(cls => {
+                const clsVote = votes[cls] || 0;
+                const percentage = kValue > 0 ? ((clsVote / kValue) * 100).toFixed(1) : 0;
+                const cInfo = CLASS_COLORS[cls];
+
+                const barHtml = `
+                    <div>
+                        <div class="flex justify-between text-[11px] mb-0.5">
+                            <span class="text-slate-300 font-medium">${cls}</span>
+                            <span class="text-slate-400 font-mono">${clsVote}/${kValue} Phiếu (${percentage}%)</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                            <div class="h-full transition-all duration-300" style="width: ${percentage}%; background-color: ${cInfo.fill}"></div>
+                        </div>
+                    </div>
+                `;
+                votingBars.insertAdjacentHTML('beforeend', barHtml);
+            });
+
+            // 3. Bảng Xếp Hạng Top-K
+            const neighborsTableBody = document.getElementById('neighborsTableBody');
+            neighborsTableBody.innerHTML = '';
+            neighbors.forEach((n, idx) => {
+                const cInfo = CLASS_COLORS[n.label] || { text: 'text-slate-300' };
+                const row = `
+                    <tr class="hover:bg-slate-800/50 transition">
+                        <td class="p-2 font-mono font-semibold text-slate-400">#${idx + 1}</td>
+                        <td class="p-2 font-medium ${cInfo.text}">${n.label}</td>
+                        <td class="p-2 font-mono text-slate-400">(${n.x.toFixed(1)}, ${n.y.toFixed(1)})</td>
+                        <td class="p-2 text-right font-mono text-amber-400 font-semibold">${n.distance.toFixed(3)} cm</td>
+                    </tr>
+                `;
+                neighborsTableBody.insertAdjacentHTML('beforeend', row);
+            });
+
+            // 4. Nhật Ký Giải Thích Chi Tiết
+            const decisionLog = document.getElementById('decisionLog');
+            decisionLog.innerHTML = `
+                <div class="text-indigo-400">Bước 1: Tọa độ mẫu hoa cần dự đoán đặt tại X = ${queryPoint.x.toFixed(1)}, Y = ${queryPoint.y.toFixed(1)}</div>
+                <div>Bước 2: Tính khoảng cách Euclidean đến toàn bộ ${evaluatedPoints.length} điểm dữ liệu trong tập huấn luyện.</div>
+                <div>Bước 3: Sắp xếp danh sách tăng dần và chọn Top K = ${kValue} láng giềng gần nhất.</div>
+                <div>Bước 4: Tổng hợp số lượng bỏ phiếu đa số từ K láng giềng:</div>
+                <div class="pl-4 border-l border-slate-800 text-slate-400">
+                    ${Object.entries(votes).map(([c, v]) => `- ${c}: ${v}/${kValue} phiếu bầu`).join('<br>')}
+                </div>
+                <div class="text-emerald-400 font-semibold">Bước 5: Kết Luận Phân Loại Thuộc Loài Hoa: ${predictedClass}</div>
+            `;
+        }
+
+        // --- BẮT SỰ KIỆN TƯƠNG TÁC Ô NHẬP SỐ ---
+        const kInput = document.getElementById('kInput');
+        const queryXInput = document.getElementById('queryXInput');
+        const queryYInput = document.getElementById('queryYInput');
+
+        // Bắt sự kiện khi gõ K
+        kInput.addEventListener('input', (e) => {
+            let val = parseInt(e.target.value);
+            if (!isNaN(val) && val >= 1 && val <= 15) {
+                kValue = val;
+                render();
+            }
+        });
+
+        // Bắt sự kiện khi gõ X
+        queryXInput.addEventListener('input', (e) => {
+            let val = parseFloat(e.target.value);
+            if (!isNaN(val)) {
+                queryPoint.x = Math.min(Math.max(val, 0), 10);
+                render();
+            }
+        });
+
+        // Bắt sự kiện khi gõ Y
+        queryYInput.addEventListener('input', (e) => {
+            let val = parseFloat(e.target.value);
+            if (!isNaN(val)) {
+                queryPoint.y = Math.min(Math.max(val, 0), 10);
+                render();
+            }
+        });
+
+        // Thay đổi tập dữ liệu
+        document.getElementById('datasetSelect').addEventListener('change', (e) => {
+            currentDataset = e.target.value === 'iris' ? IRIS_SUBSET : SIMPLE_DATASET;
+            render();
+        });
+
+        // --- XỬ LÝ ZOOM & PAN TRÊN CANVAS ---
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+            const newZoom = zoomLevel * zoomFactor;
+            if (newZoom >= 0.5 && newZoom <= 5.0) {
+                zoomLevel = newZoom;
+                render();
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startDragPos = { x: e.clientX - panOffset.x, y: e.clientY - panOffset.y };
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            panOffset.x = e.clientX - startDragPos.x;
+            panOffset.y = e.clientY - startDragPos.y;
+            render();
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Nút đặt lại góc nhìn ban đầu
+        document.getElementById('resetViewBtn').addEventListener('click', () => {
+            zoomLevel = 1.0;
+            panOffset = { x: 0, y: 0 };
+            render();
+        });
+
+        // Thêm điểm dữ liệu mới
+        document.getElementById('addDataForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newX = parseFloat(document.getElementById('newX').value);
+            const newY = parseFloat(document.getElementById('newY').value);
+            const newClass = document.getElementById('newClass').value;
+
+            currentDataset.push({ x: newX, y: newY, label: newClass });
+            render();
+        });
+
+        // Khởi chạy
+        resizeCanvas();
+    </script>
+</body>
+</html>
